@@ -21,12 +21,12 @@
 	ETModelRepository *repository;
 }
 
-@property (retain) ETLayoutItemGroup *entityViewItem;
-@property (retain) ETLayoutItemGroup *sourceListItem;
-@property (retain) ETLayoutItem *viewPopUpItem;
-@property (retain) ETLayoutItem *modelLayerPopUpItem;
-@property (retain) ETEntityDescription *editedEntityDescription;
-@property (retain) ETModelRepository *repository;
+@property (nonatomic, retain) ETLayoutItemGroup *entityViewItem;
+@property (nonatomic, retain) ETLayoutItemGroup *sourceListItem;
+@property (nonatomic, retain) ETLayoutItem *viewPopUpItem;
+@property (nonatomic, retain) ETLayoutItem *modelLayerPopUpItem;
+@property (nonatomic, retain) ETEntityDescription *editedEntityDescription;
+@property (nonatomic, retain) ETModelRepository *repository;
 
 - (void) updatePresentedContent;
 

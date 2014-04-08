@@ -6,7 +6,6 @@
 	License:  Modified BSD  (see COPYING)
  */
 
-#import <EtoileSerialize/EtoileSerialize.h>
 #import "MBAppController.h"
 #import "ETModelRepository.h"
 #import "MBLayoutItemFactory.h"
@@ -23,9 +22,12 @@ static ETUTI *repositoryUTI = nil;
 	[super dealloc];
 }
 
-- (id) init
+- (id) initWithObjectGraphContext:(COObjectGraphContext *)aContext
 {
-	SUPERINIT;
+	self = [super initWithObjectGraphContext: aContext];
+	if (self == nil)
+		return self;
+
 	ASSIGN(itemFactory, [MBLayoutItemFactory factory]);
 	openedRepositories = [[NSMutableSet alloc] init];
 
@@ -42,17 +44,29 @@ static ETUTI *repositoryUTI = nil;
 	ETAssert([[ETUTI typeWithClass: [ETModelRepository class]] isEqual: repositoryUTI]);
 
 	ETLayoutItemGroup *repoItem = [itemFactory browserWithRepository: [ETModelRepository mainRepository]];
-	ETLayoutItemGroup *docItem = [itemFactory editorWithPackageDescription: AUTORELEASE([[ETPackageDescription alloc] init])];
+	ETLayoutItemGroup *docItem =
+		[itemFactory editorWithPackageDescription: AUTORELEASE([[ETPackageDescription alloc] init])];
+	ETItemTemplate *repoTemplate =
+		[MBRepositoryBrowserTemplate templateWithItem: repoItem
+		                                  objectClass: Nil
+		                           objectGraphContext: aContext];
+	ETItemTemplate *docTemplate =
+		[MBPackageEditorTemplate templateWithItem: docItem
+		                              objectClass: Nil
+		                       objectGraphContext: aContext];
+	ETItemTemplate *baseTemplate =
+		[MBPackageEditorTemplate templateWithItem: docItem
+		                              objectClass: Nil
+		                       objectGraphContext: aContext];
+	ETItemTemplate *baseGroupTemplate =
+		[MBRepositoryBrowserTemplate templateWithItem: repoItem
+		                                  objectClass: Nil
+		                           objectGraphContext: aContext];
 
-	[self setTemplate: [MBRepositoryBrowserTemplate templateWithItem: repoItem objectClass: Nil]
-	          forType: [ETUTI typeWithClass: [ETModelRepository class]]];
-	[self setTemplate: [MBPackageEditorTemplate templateWithItem: docItem objectClass: Nil] 
-	          forType: [ETUTI typeWithClass: [ETPackageDescription class]]];
-
-	[self setTemplate: [MBRepositoryBrowserTemplate templateWithItem: repoItem objectClass: Nil]
-	          forType: kETTemplateGroupType];
-	[self setTemplate: [MBPackageEditorTemplate templateWithItem: docItem objectClass: Nil] 
-	          forType: kETTemplateObjectType];
+	[self setTemplate: repoTemplate forType: [ETUTI typeWithClass: [ETModelRepository class]]];
+	[self setTemplate: docTemplate forType: [ETUTI typeWithClass: [ETPackageDescription class]]];
+	[self setTemplate: baseGroupTemplate forType: kETTemplateGroupType];
+	[self setTemplate: baseTemplate forType: kETTemplateObjectType];
 
 	return self;
 }
@@ -150,10 +164,14 @@ static ETUTI *repositoryUTI = nil;
 - (ETLayoutItem *) newItemReadFromURL: (NSURL *)aURL options: (NSDictionary *)options
 {
 	CREATE_AUTORELEASE_POOL(pool);
+#ifdef ETOILE_SERIALIZE
 	ETDeserializer *deserializer = [[ETSerializer serializerWithBackend: [ETSerializerBackendXML class]
 	                                                             forURL: aURL] deserializer];
 	[deserializer setVersion: 0];
 	id object = RETAIN([deserializer restoreObjectGraph]);
+#else
+	id object = nil;
+#endif
 	DESTROY(pool);
 
 	ETLayoutItem *newItem = [self newItemWithRepresentedObject: object options: options];
@@ -176,10 +194,12 @@ static ETUTI *repositoryUTI = nil;
 	NSLog(@"Will save %@ at %@", [anItem representedObject], saveURL);
 
 	CREATE_AUTORELEASE_POOL(pool);
+#ifdef ETOILE_SERIALIZE
 	id object = [anItem representedObject];
 	ETSerializer *serializer = [ETSerializer serializerWithBackend: [ETSerializerBackendXML class]
 	                                                        forURL: saveURL];
 	[serializer serializeObject: object withName: @"root"];
+#endif
 	DESTROY(pool);
 
 	return YES;

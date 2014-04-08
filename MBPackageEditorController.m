@@ -12,7 +12,7 @@
 
 @synthesize entityViewItem, sourceListItem, viewPopUpItem, modelLayerPopUpItem, editedEntityDescription, repository;
 
-- (id) retain
+/*- (id) retain
 {
 	NSLog(@"Retain %@ %d", self, [self retainCount]);
 	return [super retain];
@@ -28,11 +28,14 @@
 {
 	NSLog(@"Autorelease %@ %d", self, [self retainCount]);
 	return [super autorelease];
-}
+}*/
 
-- (id) init
+- (id) initWithObjectGraphContext:(COObjectGraphContext *)aContext
 {
-	SUPERINIT;
+	self = [super initWithObjectGraphContext: aContext];
+	if (self == nil)
+		return self;
+
 	ASSIGN(repository, [ETModelRepository mainRepository]);
 	[self setCurrentObjectType: nil];
 	return self;
@@ -180,27 +183,14 @@
 	[self updatePresentedContent];
 }
 
-- (IBAction) add: (id)sender
+- (void) add: (id)sender
 {
-	id firstResponder = [[ETTool activeTool] firstKeyResponder];
-	ETLayoutItem *activeItem = nil;
+	ETLayoutItem *focusedItem = [[self firstResponderSharingArea] focusedItem];
 
-	NSLog(@"First responder %@", firstResponder);
-
-	if ([firstResponder isView])
+	if ([focusedItem isEqual: sourceListItem]
+	 || [focusedItem isEqual: entityViewItem])
 	{
-		activeItem = [firstResponder owningItem];
-	}
-	else if ([firstResponder isLayoutItem])
-	{
-		activeItem = firstResponder;
-	}
-	NSLog(@"Active item %@", activeItem);
-
-	if ([activeItem isEqual: sourceListItem]
-	 || [activeItem isEqual: entityViewItem])
-	{
-		[[(ETLayoutItemGroup *)activeItem controller] add: sender];
+		[[(ETLayoutItemGroup *)focusedItem controller] add: sender];
 	}
 }
 
@@ -238,19 +228,25 @@
 
 @implementation MBEntityViewController
 
-- (id) init
+- (id) initWithObjectGraphContext:(COObjectGraphContext *)aContext
 {
-	SUPERINIT;
+	self = [super initWithObjectGraphContext: aContext];
+	if (self == nil)
+		return self;
 
 	ETLayoutItem *item = [[ETLayoutItemFactory factory] item]; 
 	ETUTI *propertyDescType = [ETUTI typeWithClass: [ETPropertyDescription class]];
+	ETItemTemplate *propertyTemplate = [ETItemTemplate templateWithItem: item
+	                                                        objectClass: [ETPropertyDescription class]
+	                                                 objectGraphContext: aContext];
+	ETItemTemplate *objectTemplate = [ETItemTemplate templateWithItem: item
+	                                                      objectClass: [ETAdaptiveModelObject class]
+	                                               objectGraphContext: aContext];
 
 	/* The current object type is controlled by -[MBPackageEditorController updatePresentedContent] */
 	[self setCurrentObjectType: propertyDescType];
-	[self setTemplate: [ETItemTemplate templateWithItem: item objectClass: [ETPropertyDescription class]]
-	          forType: propertyDescType];
-	[self setTemplate: [ETItemTemplate templateWithItem: item objectClass: [ETAdaptiveModelObject class]]
-	  forType: [ETUTI typeWithClass: [ETAdaptiveModelObject class]]];
+	[self setTemplate: propertyTemplate forType: propertyDescType];
+	[self setTemplate: objectTemplate forType: [ETUTI typeWithClass: [ETAdaptiveModelObject class]]];
 
 	return self;
 }

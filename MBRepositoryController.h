@@ -18,9 +18,9 @@
 	NSUInteger nbOfUntitledRepositories;
 }
 
-@property (readonly) ETModelRepository *repository;
-@property (readonly) ETModelDescriptionRepository *metaRepository;
-@property (retain) ETLayoutItemGroup *repositoryViewItem;
+@property (nonatomic, readonly) ETModelRepository *repository;
+@property (nonatomic, readonly) ETModelDescriptionRepository *metaRepository;
+@property (nonatomic, retain) ETLayoutItemGroup *repositoryViewItem;
 
 - (IBAction) changeRepositoryPresentation: (NSPopUpButton *)sender;
 - (IBAction) searchRepository: (id)sender;

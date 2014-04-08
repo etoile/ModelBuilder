@@ -39,6 +39,8 @@ static ETModelRepository *mainRepo = nil;
 {
 	DESTROY(_content);
 	DESTROY(_metaRepository);
+	
+	[super dealloc];
 }
 
 - (id) metaRepository

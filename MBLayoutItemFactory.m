@@ -16,7 +16,7 @@
 
 - (ETOutlineLayout *) outlineLayoutForBrowser
 {
-	ETOutlineLayout *layout = [ETOutlineLayout layout];
+	ETOutlineLayout *layout = [ETOutlineLayout layoutWithObjectGraphContext: [self objectGraphContext]];
 
 	[layout setDisplayedProperties: A(@"displayName", @"typeDescription")];
 	[layout setDisplayName: @"Type" forProperty: @"typeDescription"];
@@ -45,7 +45,8 @@
 
 - (ETLayoutItemGroup *) editorWithPackageDescription: (ETPackageDescription *)aPackageDesc
 {
-	MBPackageEditorController *controller = AUTORELEASE([[MBPackageEditorController alloc] init]);
+	MBPackageEditorController *controller = AUTORELEASE([[MBPackageEditorController alloc]
+		initWithObjectGraphContext: [self objectGraphContext]]);
 	ETLayoutItemGroup *topbar = [self editorTopbarWithController: controller];
 	ETLayoutItemGroup *body = [self editorBodyWithPackageDescription: aPackageDesc controller: controller];
 	ETLayoutItemGroup *editor = [self itemGroupWithItems: A(topbar, body)];
@@ -54,7 +55,7 @@
 	[editor setController: controller];
 	[editor setRepresentedObject: aPackageDesc]; /* For MBAppController template lookup needs */
 	[editor setShouldMutateRepresentedObject: NO];
-	[editor setLayout: [ETColumnLayout layout]];
+	[editor setLayout: [ETColumnLayout layoutWithObjectGraphContext: [self objectGraphContext]]];
 	[editor setSize: [self defaultEditorSize]];
 
 	return editor;
@@ -71,7 +72,7 @@
 
 	[body setAutoresizingMask: ETAutoresizingFlexibleWidth | ETAutoresizingFlexibleHeight];
 	[body setSize: [self defaultEditorBodySize]]; // FIXME: Avoid negative size if -setSize: is not called
-	[body setLayout: [ETLineLayout layout]];
+	[body setLayout: [ETLineLayout layoutWithObjectGraphContext: [self objectGraphContext]]];
 	[body addItems: A(sourceList, entityView)];
 
 	return body;
@@ -118,7 +119,7 @@
 
 	[itemGroup setWidth: [self defaultEditorSize].width];
 	[itemGroup setHeight: [self defaultIconAndLabelBarHeight]];
-	[itemGroup setLayout: [ETLineLayout layout]];
+	[itemGroup setLayout: [ETLineLayout layoutWithObjectGraphContext: [self objectGraphContext]]];
 	[[itemGroup layout] setSeparatorTemplateItem: [self flexibleSpaceSeparator]];
 	[itemGroup addItems: 
 		A([self barElementFromItem: addPropertyItem withLabel: _(@"Add Property")],
@@ -133,13 +134,21 @@
 - (ETLayoutItemGroup *) sourceListWithPackageDescription: (ETPackageDescription *)aPackageDesc controller: (id)aController
 {
 	ETLayoutItemGroup *itemGroup = [self itemGroupWithRepresentedObject: aPackageDesc];
-	ETController *controller = AUTORELEASE([[ETController alloc] init]);
+	ETController *controller =
+		AUTORELEASE([[ETController alloc] initWithObjectGraphContext: [self objectGraphContext]]);
 	ETUTI *entityDescType = [ETUTI typeWithClass: [ETEntityDescription class]];
 
+	ETItemTemplate *metamodelTemplate = [ETItemTemplate templateWithItem: [self item]
+	                                                         objectClass: [ETEntityDescription class]
+		                                               objectGraphContext: [self objectGraphContext]];
+	ETItemTemplate *modelTemplate = [ETItemTemplate templateWithItem: [self item]
+	                                                     objectClass: [ETAdaptiveModelObject class]
+	                                              objectGraphContext: [self objectGraphContext]];
+
 	/* The current object type is controlled by -[MBPackageEditorController updatePresentedModelLayer] */
-	[controller setTemplate: [ETItemTemplate templateWithItem: [self item] objectClass: [ETEntityDescription class]]
+	[controller setTemplate: metamodelTemplate
 	                forType: entityDescType];
-	[controller setTemplate: [ETItemTemplate templateWithItem: [self item] objectClass: [ETAdaptiveModelObject class]]
+	[controller setTemplate: modelTemplate
 	                forType: [ETUTI typeWithClass: [ETAdaptiveModelObject class]]];
 	[controller setCurrentObjectType: entityDescType];
 
@@ -148,7 +157,7 @@
 	[itemGroup setHeight: [self defaultEditorBodySize].height];
 	[itemGroup setWidth: 250];
 	[itemGroup setSource: itemGroup];
-	[itemGroup setLayout: [ETTableLayout layout]];
+	[itemGroup setLayout: [ETTableLayout layoutWithObjectGraphContext: [self objectGraphContext]]];
 	[[itemGroup layout] setDisplayedProperties: A(@"name")];
 	[[[itemGroup layout] columnForProperty: @"name"] setWidth: 250];
 	[itemGroup setHasVerticalScroller: YES];
@@ -165,7 +174,7 @@
 - (ETLayoutItemGroup *) entityViewWithEntityDescription: (ETEntityDescription *)anEntityDesc controller: (id)aController
 {
 	ETLayoutItemGroup *itemGroup = [self itemGroupWithRepresentedObject: anEntityDesc];
-	ETTableLayout *layout = [ETTableLayout layout];
+	ETTableLayout *layout = [ETTableLayout layoutWithObjectGraphContext: [self objectGraphContext]];
 	NSArray *headerNames = A(@"Name", @"Item Identifier", @"Derived", 
 		@"Container", @"Multivalued", @"Ordered", @"Opposite", @"Type", @"Role");
 
@@ -193,9 +202,12 @@
 		[layout setDisplayName: [headerNames objectAtIndex: i] 
 		           forProperty: [[layout displayedProperties] objectAtIndex: i]];
 	}
+	
+	ETController *controller = AUTORELEASE([[MBEntityViewController alloc]
+		initWithObjectGraphContext: [self objectGraphContext]]);
 
 	/* The controller templates are set up in -[MBEntityViewController init] */
-	[itemGroup setController: AUTORELEASE([[MBEntityViewController alloc] init])];
+	[itemGroup setController: controller];
 	[itemGroup setAutoresizingMask: ETAutoresizingFlexibleWidth | ETAutoresizingFlexibleHeight];
 	[itemGroup setHeight: [self defaultEditorBodySize].height];
 	[itemGroup setWidth: 550];
@@ -271,27 +283,38 @@
 	[itemGroup setAutoresizingMask: ETAutoresizingFlexibleWidth];
 	[itemGroup setWidth: [self defaultBrowserSize].width];
 	[itemGroup setHeight: [self defaultIconAndLabelBarHeight]];
-	[itemGroup setLayout: [ETLineLayout layout]];
+	[itemGroup setLayout: [ETLineLayout layoutWithObjectGraphContext: [self objectGraphContext]]];
 
 	return itemGroup;
 }
 
+- (ETLayoutItemGroup *) repositoryViewWithRepository: (ETModelRepository *)aRepo
+{
+	ETLayoutItemGroup *repositoryView = [self browserWithCollection: [aRepo metaRepository]];
+	ETController *controller = AUTORELEASE([[ETController alloc]
+		initWithObjectGraphContext: [self objectGraphContext]]);
+
+	[repositoryView setController: controller];
+	
+	return repositoryView;
+}
+
 - (ETLayoutItemGroup *) browserWithRepository: (ETModelRepository *)aRepo
 {
-	ETLayoutItemGroup *repositoryViewItem = [self browserWithCollection: [aRepo metaRepository]];
-	MBRepositoryController *controller = AUTORELEASE([[MBRepositoryController alloc] init]);
+	MBRepositoryController *controller = AUTORELEASE([[MBRepositoryController alloc]
+		initWithObjectGraphContext: [self objectGraphContext]]);
+	ETLayoutItemGroup *repositoryView = [self repositoryViewWithRepository: aRepo];
 	ETLayoutItemGroup *bottomBar = [self browserBottomBarWithController: controller];
 	ETLayoutItemGroup *browser = [self itemGroupWithFrame: ETMakeRect(NSZeroPoint, [self defaultBrowserSize])];
 
-	[repositoryViewItem setController: AUTORELEASE([[ETController alloc] init])];	
-	[controller setRepositoryViewItem: repositoryViewItem];
+	[controller setRepositoryViewItem: repositoryView];
 
 	[browser setController: controller];
 	[browser setRepresentedObject: aRepo]; /* For MBRepositoryController needs */
 	[browser setShouldMutateRepresentedObject: NO];
 	[browser setAutoresizingMask: ETAutoresizingFlexibleWidth | ETAutoresizingFlexibleHeight];
-	[browser setLayout: [ETColumnLayout layout]];
-	[browser addItems: A(bottomBar, repositoryViewItem)];
+	[browser setLayout: [ETColumnLayout layoutWithObjectGraphContext: [self objectGraphContext]]];
+	[browser addItems: A(bottomBar, repositoryView)];
 
 	ETLog(@"\n%@\n", [browser descriptionWithOptions: [NSMutableDictionary dictionaryWithObjectsAndKeys: 
 		A(@"frame", @"autoresizingMask"), kETDescriptionOptionValuesForKeyPaths,
@@ -308,7 +331,7 @@
 	[itemGroup setSource: itemGroup];
 	[itemGroup setAutoresizingMask: ETAutoresizingFlexibleWidth | ETAutoresizingFlexibleHeight];
 	[itemGroup setSize: [self defaultBrowserSize]]; // FIXME: Avoid negative size if -setSize: is not called
-	[itemGroup setLayout: [ETTableLayout layout]];
+	[itemGroup setLayout: [ETTableLayout layoutWithObjectGraphContext: [self objectGraphContext]]];
 
 	return itemGroup;
 }

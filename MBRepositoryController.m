@@ -20,10 +20,13 @@
 	[super dealloc];
 }
 
-- (id) init
+- (id) initWithObjectGraphContext:(COObjectGraphContext *)aContext
 {
-	SUPERINIT;
-	ASSIGN(itemFactory, [MBLayoutItemFactory factory]);
+	self = [super initWithObjectGraphContext: aContext];
+	if (self == nil)
+		return self;
+
+	ASSIGN(itemFactory, [MBLayoutItemFactory factoryWithObjectGraphContext: aContext]);
 	return self;
 }
 
@@ -48,7 +51,8 @@
 
 	if ([viewName isEqual: _(@"Column")])
 	{
-		[repositoryViewItem setLayout: [ETBrowserLayout layout]];
+		[repositoryViewItem setLayout:
+			[ETBrowserLayout layoutWithObjectGraphContext: [self objectGraphContext]]];
 		[[sender itemWithTitle: _(@"Column")] setState: NSOnState];
 		[[sender itemWithTitle: _(@"List")] setState: NSOffState];
 	}
